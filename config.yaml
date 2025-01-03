@@ -1,0 +1,11 @@
+# Application Configuration
+IP_NUM: "127.0.0.1"
+PORT_NUM: "8000"
+workers: "5"
+
+# AWS S3 Configuration
+S3:
+  s3_accesskey: "your-access-key"
+  s3_privatekey: "your-private-key"
+  s3_region_name: "your-region-name"
+  s3_bucket_name: "your-bucket-name"
