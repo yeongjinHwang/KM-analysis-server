@@ -7,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import cv2
 
 from utils.loader import yaml_loader, initialize_logger
-from utils.detect import is_address
+from utils.detect import is_address, is_take_away, is_half
+from utils.data_process import adaptive_ema
 
 # YAML 설정 값 로드
 CONFIG = yaml_loader("config.yaml")
@@ -77,10 +78,10 @@ async def pose(request: video_info): # mediapipe model자체는 동기
     video_path, hand_type = request.url, request.handType
     user_video_name = video_path.replace("/", "_")  # ex) username/videoname.mp4 -> username_videoname.mp4
 
-    # video download
+    # video 다운로드
     await download_file_async(S3_CONFIG.get("s3_bucket_name"), video_path, user_video_name)
 
-    # 20fps video transform
+    # 20fps 변환
     ffmpeg_command = (
         f"ffmpeg -i {user_video_name} "
         f"-an -c:v libx264 "
@@ -103,13 +104,17 @@ async def pose(request: video_info): # mediapipe model자체는 동기
     PoseLandMark = {joint: {"x": [], "y": [], "z_norm": [], "x_norm": []} for joint in KEY_POINT_STRING}
     none_frame = []
     is_swing = False
+    detect_flow = "address"
+    step = {}  # 자세 기록용
+    address_count = 0  
+
     while cap.isOpened():
         success, image = await read_frame_async(cap)
         if not success: break
         if frame == 0: height, width, channel = image.shape
         if hand_type == "L": image = cv2.flip(image, 1)
 
-        # Mediapipe Model Selection
+        # 모델 선택
         if is_swing == False : results = full_model.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         else :  results = full_model.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
@@ -137,11 +142,56 @@ async def pose(request: video_info): # mediapipe model자체는 동기
                     "y": landmark.y * height
                 }
 
-            # address detect
-            if is_address(current_landmark):
-                is_swing=True
-                print(f"Frame {frame}: Address detected!")
+            # 데이터 보정
+            if is_swing==True :
+                for joint in KEY_POINT_STRING:
+                    if frame > 0:
+                        # 속도 계산
+                        speed_x = abs(PoseLandMark[joint]["x"][-1] - PoseLandMark[joint]["x"][-2])
+                        speed_y = abs(PoseLandMark[joint]["y"][-1] - PoseLandMark[joint]["y"][-2])
+                        # Adaptive EMA 적용
+                        PoseLandMark[joint]["x"][-1] = adaptive_ema(
+                            PoseLandMark[joint]["x"][-2], PoseLandMark[joint]["x"][-1], speed_x
+                        )
+                        PoseLandMark[joint]["y"][-1] = adaptive_ema(
+                            PoseLandMark[joint]["y"][-2], PoseLandMark[joint]["y"][-1], speed_y
+                        ) 
 
+            # detect
+            match detect_flow :
+                case "address" :
+                    if is_address(current_landmark):
+                        address_count +=1
+                        if address_count>=3 :
+                            step["address"] = frame
+                            is_swing=True
+                            detect_flow = "take_away"
+                    else :
+                        address_count = 0
+                    
+                case "take_away" :
+                    if is_take_away(current_landmark) :
+                        step["take_away"] = frame
+                        detect_flow = "half"
+
+                case "half" :
+                    if is_half(current_landmark) :
+                        step["half"] = frame
+                        detect_flow = "top" 
+
+                # case "top" :
+
+
+            if detect_flow != "address" :
+                if is_address(current_landmark):
+                    address_count +=1
+                    if address_count>=3 :
+                        step = {}
+                        step["address"] = frame
+                        is_swing=True
+                        detect_flow = "take_away"
+                else :
+                    address_count = 0
         frame += 1
 
     cap.release()
