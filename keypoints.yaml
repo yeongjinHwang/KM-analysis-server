@@ -1,0 +1,47 @@
+key_point_string:
+  - left_wrist
+  - right_wrist
+  - left_hip
+  - right_hip
+  - left_shoulder
+  - right_shoulder
+  - left_knee
+  - right_knee
+  - left_heel
+  - right_heel
+  - left_toe
+  - right_toe
+  - left_eye
+  - right_eye
+  - left_elbow
+  - right_elbow
+  - ears
+
+string_match_index:
+  - 15
+  - 16
+  - 23
+  - 24
+  - 11
+  - 12
+  - 25
+  - 26
+  - 29
+  - 30
+  - 31
+  - 32
+  - 2
+  - 5
+  - 13
+  - 14
+  - 8
+
+eight_step:
+  - address
+  - take_away
+  - half
+  - top
+  - down_half
+  - impact
+  - follow_through
+  - finish
