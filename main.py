@@ -4,6 +4,7 @@ from utils.loader import yaml_loader, initialize_logger
 
 from routers.root import router as root
 from routers.pose import router as pose
+from routers.pose_local import router as pose_local
 
 # 로그 초기화
 LOG_FILE = "app.log"
@@ -24,6 +25,7 @@ app = FastAPI()
 try:
     app.include_router(root)
     app.include_router(pose)
+    app.include_router(pose_local)
 except NameError as e:
     logger.error(f"Root 라우터 등록 중 오류 발생: {e}")
     raise NameError("라우터가 정의되지 않았습니다..") from e
