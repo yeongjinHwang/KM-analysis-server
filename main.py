@@ -43,5 +43,4 @@ if __name__ == "__main__":
         # 명령어 실행
         subprocess.run(command, check=True)
     except subprocess.CalledProcessError as e:
-        logger.error(f"서버 실행 중 오류가 발생했습니다: {e}")
         raise RuntimeError(f"서버 실행 중 오류가 발생했습니다: {e}") from e
