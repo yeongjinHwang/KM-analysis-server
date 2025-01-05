@@ -1,14 +1,13 @@
 from fastapi import FastAPI
 import subprocess
-from utils.loader import yaml_loader, initialize_logger
+from utils.loader import yaml_loader
 
 from routers.root import router as root
 from routers.pose import router as pose
-from routers.pose_local import router as pose_local
 
-# 로그 초기화
-LOG_FILE = "app.log"
-logger = initialize_logger(LOG_FILE)
+#test
+from routers.pose_local import router as pose_local
+from routers.pose_check import router as pose_check
 
 # 설정 파일 로드
 settings = yaml_loader("config.yaml")
@@ -20,19 +19,17 @@ WORKER: str = settings.get("WORKERS", "5")
 
 # FastAPI 애플리케이션 생성
 app = FastAPI()
+# 전역 상태 초기화
+app.state.task_results = {}
 
 # 라우터 등록
-try:
-    app.include_router(root)
-    app.include_router(pose)
-    app.include_router(pose_local)
-except NameError as e:
-    logger.error(f"Root 라우터 등록 중 오류 발생: {e}")
-    raise NameError("라우터가 정의되지 않았습니다..") from e
+app.include_router(root)
+app.include_router(pose)
+app.include_router(pose_local)
+app.include_router(pose_check)
 
 # 메인 실행부
 if __name__ == "__main__":
-    logger.info("FastAPI 서버 시작 준비 중...")
     try:
         # subprocess 명령어 생성
         command = [
@@ -42,9 +39,6 @@ if __name__ == "__main__":
             "--port", PORT_NUM,
             "--workers", WORKER,
         ]
-
-        # 실행 명령어를 로그에 기록
-        logger.info(f"서버 실행 명령어: {' '.join(command)}")
 
         # 명령어 실행
         subprocess.run(command, check=True)
