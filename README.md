@@ -15,6 +15,11 @@ http://km.tempodiall.com/
 
 ---
 
+## 🛠️ Architecture
+![Architecture](images/architecture.png)
+
+   - 실시간 단계 감지 및 Model Swiching
+
 ## 🛠️ 주요 기능
 
 1. **비디오 업로드 및 분석**:
