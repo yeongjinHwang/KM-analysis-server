@@ -21,9 +21,6 @@ class video_info(BaseModel):
 
 router = APIRouter()
 
-# 사용자별 결과 저장
-task_results = {}
-
 async def mp_background(task_id, user_video_name, hand_type, task_results):
     """
     Mediapipe 모델을 백그라운드에서 실행.
@@ -91,6 +88,7 @@ async def mp_background(task_id, user_video_name, hand_type, task_results):
                             # 속도 계산
                             speed_x = abs(PoseLandMark[joint]["x"][-1] - PoseLandMark[joint]["x"][-2])
                             speed_y = abs(PoseLandMark[joint]["y"][-1] - PoseLandMark[joint]["y"][-2])
+
                             # Adaptive EMA 적용
                             PoseLandMark[joint]["x"][-1] = adaptive_ema(
                                 PoseLandMark[joint]["x"][-2], PoseLandMark[joint]["x"][-1], speed_x
@@ -190,6 +188,10 @@ async def mp_background(task_id, user_video_name, hand_type, task_results):
 
             frame += 1
         cap.release()
+
+        if "finish_top" in step and "finish" not in step:
+            step["finish"] = step["finish_top"]
+            
         task_results[task_id] = {"status": "step_completed", "step": step}
         print(task_results[task_id])
 
